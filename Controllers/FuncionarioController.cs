@@ -43,13 +43,23 @@ public class FuncionarioController : ControllerBase
     [HttpPost]
     public IActionResult Criar(Funcionario funcionario)
     {
+        // Validação: campos obrigatórios
+        if (string.IsNullOrWhiteSpace(funcionario.Nome))
+            return BadRequest("O campo Nome é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(funcionario.Departamento))
+            return BadRequest("O campo Departamento é obrigatório.");
+
+        // Remove o ID se fornecido - o banco gera automaticamente
+        funcionario.Id = 0;
+
         _context.Funcionarios.Add(funcionario);
-        // TODO: Chamar o método SaveChanges do _context para salvar no Banco SQL
+        _context.SaveChanges();
 
         var tableClient = GetTableClient();
         var funcionarioLog = new FuncionarioLog(funcionario, TipoAcao.Inclusao, funcionario.Departamento, Guid.NewGuid().ToString());
 
-        // TODO: Chamar o método UpsertEntity para salvar no Azure Table
+        tableClient.UpsertEntity(funcionarioLog);
 
         return CreatedAtAction(nameof(ObterPorId), new { id = funcionario.Id }, funcionario);
     }
@@ -57,6 +67,13 @@ public class FuncionarioController : ControllerBase
     [HttpPut("{id}")]
     public IActionResult Atualizar(int id, Funcionario funcionario)
     {
+        // Validação: campos obrigatórios
+        if (string.IsNullOrWhiteSpace(funcionario.Nome))
+            return BadRequest("O campo Nome é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(funcionario.Departamento))
+            return BadRequest("O campo Departamento é obrigatório.");
+
         var funcionarioBanco = _context.Funcionarios.Find(id);
 
         if (funcionarioBanco == null)
@@ -64,15 +81,19 @@ public class FuncionarioController : ControllerBase
 
         funcionarioBanco.Nome = funcionario.Nome;
         funcionarioBanco.Endereco = funcionario.Endereco;
-        // TODO: As propriedades estão incompletas
+        funcionarioBanco.Ramal = funcionario.Ramal;
+        funcionarioBanco.EmailProfissional = funcionario.EmailProfissional;
+        funcionarioBanco.Departamento = funcionario.Departamento;
+        funcionarioBanco.Salario = funcionario.Salario;
+        funcionarioBanco.DataAdmissao = funcionario.DataAdmissao;
 
-        // TODO: Chamar o método de Update do _context.Funcionarios para salvar no Banco SQL
+        _context.Funcionarios.Update(funcionarioBanco);
         _context.SaveChanges();
 
         var tableClient = GetTableClient();
         var funcionarioLog = new FuncionarioLog(funcionarioBanco, TipoAcao.Atualizacao, funcionarioBanco.Departamento, Guid.NewGuid().ToString());
 
-        // TODO: Chamar o método UpsertEntity para salvar no Azure Table
+        tableClient.UpsertEntity(funcionarioLog);
 
         return Ok();
     }
@@ -85,14 +106,32 @@ public class FuncionarioController : ControllerBase
         if (funcionarioBanco == null)
             return NotFound();
 
-        // TODO: Chamar o método de Remove do _context.Funcionarios para salvar no Banco SQL
+        _context.Funcionarios.Remove(funcionarioBanco);
         _context.SaveChanges();
 
         var tableClient = GetTableClient();
         var funcionarioLog = new FuncionarioLog(funcionarioBanco, TipoAcao.Remocao, funcionarioBanco.Departamento, Guid.NewGuid().ToString());
 
-        // TODO: Chamar o método UpsertEntity para salvar no Azure Table
+        tableClient.UpsertEntity(funcionarioLog);
 
         return NoContent();
+    }
+
+    [HttpGet("Logs")]
+    public IActionResult ObterLogs()
+    {
+        var tableClient = GetTableClient();
+        var logs = tableClient.Query<FuncionarioLog>().ToList();
+
+        return Ok(logs);
+    }
+
+    [HttpGet("Logs/{departamento}")]
+    public IActionResult ObterLogsPorDepartamento(string departamento)
+    {
+        var tableClient = GetTableClient();
+        var logs = tableClient.Query<FuncionarioLog>(log => log.PartitionKey == departamento).ToList();
+
+        return Ok(logs);
     }
 }
