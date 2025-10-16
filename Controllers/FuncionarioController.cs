@@ -134,4 +134,43 @@ public class FuncionarioController : ControllerBase
 
         return Ok(logs);
     }
+
+    [HttpGet("TestConnection")]
+    public IActionResult TestConnection()
+    {
+        try
+        {
+            // Test SQL Database connection
+            var canConnectToDb = _context.Database.CanConnect();
+
+            // Test Table Storage connection string (without exposing full value)
+            var hasTableConnection = !string.IsNullOrEmpty(_connectionString);
+            var hasTableName = !string.IsNullOrEmpty(_tableName);
+
+            return Ok(new
+            {
+                SqlDatabase = new
+                {
+                    Connected = canConnectToDb,
+                    Message = canConnectToDb ? "SQL connection successful" : "SQL connection failed"
+                },
+                TableStorage = new
+                {
+                    HasConnectionString = hasTableConnection,
+                    HasTableName = hasTableName,
+                    TableName = _tableName,
+                    ConnectionStringPrefix = hasTableConnection ? _connectionString.Substring(0, Math.Min(30, _connectionString.Length)) + "..." : "Not configured"
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                Error = ex.Message,
+                InnerError = ex.InnerException?.Message,
+                StackTrace = ex.StackTrace
+            });
+        }
+    }
 }

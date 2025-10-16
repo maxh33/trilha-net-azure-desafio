@@ -188,24 +188,64 @@ POST /Funcionario
 GET /Funcionario/Logs/TI
 ```
 
-## Próximos Passos
+## Deploy no Azure
 
-Para implantar na nuvem Azure:
+### Recursos Criados
 
-1. **Criar recursos no Azure:**
-   - App Service (para hospedar a API)
-   - Azure SQL Database (banco de dados relacional)
-   - Azure Storage Account (para Table Storage)
+A aplicação está implantada no Azure com os seguintes recursos:
 
-2. **Atualizar connection strings** em `appsettings.json`:
-   - `ConexaoPadrao`: String de conexão do Azure SQL Database
-   - `SAConnectionString`: String de conexão do Azure Storage Account
+- **App Service**: `app-desafio-dio-etfvdmcbfmgfb2c6.canadacentral-01.azurewebsites.net`
+- **SQL Server**: `maxh.database.windows.net`
+- **SQL Database**: `dio-net-azure-desafio`
+- **Storage Account**: `storageaccountdioazure`
+- **Table Storage**: `FuncionarioLog`
 
-3. **Deploy:**
-   - Via Visual Studio: Botão direito no projeto → Publish
-   - Via CLI: `dotnet publish` e deploy para App Service
-   - Via GitHub Actions: CI/CD automatizado
+### Acessar API em Produção
+
+- **Swagger UI**: https://app-desafio-dio-etfvdmcbfmgfb2c6.canadacentral-01.azurewebsites.net/swagger
+- **Test Connection**: https://app-desafio-dio-etfvdmcbfmgfb2c6.canadacentral-01.azurewebsites.net/Funcionario/TestConnection
+
+### Configuração de Deployment
+
+**IMPORTANTE:** Este projeto usa Azure App Service Configuration para armazenar connection strings de forma segura.
+
+**Arquivos de Configuração:**
+- `appsettings.json` - **Não contém secrets** (seguro para commit)
+- `appsettings.Development.json` - Configuração local (SQL Express + Azurite)
+- Azure App Service Configuration - Connection strings de produção (não versionadas)
+
+**Por que `appsettings.json` está no .gitignore:**
+- Previne commit acidental de secrets
+- Azure App Service sobrescreve valores vazios com Environment Variables
+- Segue best practices de segurança
+
+### Troubleshooting Azure Deployment
+
+Se você encontrar erro **HTTP 500** ao fazer deploy:
+
+**Passo 1: Verificar Firewall do SQL Server**
+1. Azure Portal → SQL Server `maxh` → Networking
+2. Ativar: ✅ "Allow Azure services and resources to access this server"
+3. Salvar
+
+**Passo 2: Verificar Connection Strings**
+1. Azure Portal → App Service → Configuration → Connection strings
+2. Verificar que existem:
+   - `ConexaoPadrao` (tipo: SQLAzure)
+   - `SAConnectionString` (tipo: Custom)
+   - `AzureTableName` (tipo: Custom) com valor `FuncionarioLog`
+
+**Passo 3: Testar Conexões**
+```bash
+GET /Funcionario/TestConnection
+```
+
+Este endpoint retorna o status das conexões SQL e Table Storage.
+
+**Guia Completo:**
+Para instruções detalhadas de deployment e troubleshooting, consulte [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md).
 
 ## Documentação Adicional
 
-Para mais detalhes sobre a arquitetura e implementação, consulte [CLAUDE.md](CLAUDE.md).
+- **Arquitetura e Implementação**: [CLAUDE.md](CLAUDE.md)
+- **Deploy e Troubleshooting Azure**: [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)
